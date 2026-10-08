@@ -33,8 +33,8 @@ SwiftPM package:
 
 ## Tasks
 
-- [ ] 1. Scaffold SwiftPM package (Core lib, app executable, tests), .gitignore, README stub
-- [ ] 2. Usage response parsing (session/weekly/scoped windows, scale normalization)
+- [x] 1. Scaffold SwiftPM package (Core lib, app executable, tests), .gitignore, README stub
+- [x] 2. Usage response parsing (session/weekly/scoped windows, scale normalization)
 - [ ] 3. Keychain credentials reader (parse, expiry check, no refresh)
 - [ ] 4. Usage API client (request, 401/429/transport error mapping)
 - [ ] 5. Local transcript scanner (today/7-day tokens, top model, dedup)
@@ -45,3 +45,4 @@ SwiftPM package:
 
 | Task | Commit | Checks |
 |---|---|---|
+| 1 | 1f112f1 | swift build OK; swift test 1/1 passed (RED n/a: scaffold) |
