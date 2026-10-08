@@ -48,6 +48,7 @@ SwiftPM package:
 | 1 | 1f112f1 | swift build OK; swift test 1/1 passed (RED n/a: scaffold) |
 | 2 | 514067b | RED 17 failing vs stub, GREEN 19/19; extra RED/GREEN for non-object scoped entries; review review-1739f1c216a56b8a approved + acknowledged |
 | 3 | fdc7747 | RED 8 failing vs stubs, GREEN 31/31; review review-58f77bdd914bd203 approved + acknowledged |
+| 4 | ec540f4 | RED 18 failing vs stubs, GREEN 49/49; review review-ffde107baf041cdc approved + acknowledged |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
@@ -62,3 +63,10 @@ SwiftPM package:
 - No clock-skew margin in `isExpired`; consider treating tokens expiring within ~60s as expired.
 - Boolean `expiresAt` guard is untested.
 - First real Keychain read may prompt for access (item owned by Claude Code); `errSecSuccess` with non-Data result is mapped to nil.
+
+## Follow-ups (non-blocking review findings, task 4; locations only, interpretation is the parent's)
+
+- R3-001 UsageClient.swift:48-52: catch-all maps every transport error, including task cancellation, to `.transport`; the UI must not show cancellation as a network failure.
+- R3-002 UsageClient.swift:63-64: 403 is folded into `.unauthorized` (shown as expired); a 403 may mean missing scope rather than a stale token.
+- R3-003 UsageClient.swift:67-69: HTTP-date `Retry-After` is ignored.
+- R3-004 UsageClient.swift:39: request timeout is hard-coded to 10s.
