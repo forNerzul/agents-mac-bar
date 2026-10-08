@@ -37,7 +37,7 @@ SwiftPM package:
 - [x] 2. Usage response parsing (session/weekly/scoped windows, scale normalization)
 - [x] 3. Keychain credentials reader (parse, expiry check, no refresh)
 - [x] 4. Usage API client (request, 401/429/transport error mapping)
-- [ ] 5. Local transcript scanner (today/7-day tokens, top model, dedup)
+- [x] 5. Local transcript scanner (today/7-day tokens, top model, dedup)
 - [ ] 6. Menu bar UI (icon with %, panel with meters and resets, refresh timer, 90% alert)
 - [ ] 7. App bundle packaging script (LSUIElement) and README
 
