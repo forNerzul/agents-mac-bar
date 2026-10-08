@@ -49,7 +49,7 @@ SwiftPM package:
 | 2 | 514067b | RED 17 failing vs stub, GREEN 19/19; extra RED/GREEN for non-object scoped entries; review review-1739f1c216a56b8a approved + acknowledged |
 | 3 | fdc7747 | RED 8 failing vs stubs, GREEN 31/31; review review-58f77bdd914bd203 approved + acknowledged |
 | 4 | ec540f4 | RED 18 failing vs stubs, GREEN 49/49; review review-ffde107baf041cdc approved + acknowledged |
-| 5 | 3d8654e + fix | RED 7 failing vs stub, GREEN 66/66; review review-230ad0052e42c3d0 approved + acknowledged; follow-up fix for strict UTF-8 (RED total 0, GREEN 67/67) |
+| 5 | 3d8654e + a3d4791 | RED 7 failing vs stub, GREEN 66/66; review review-230ad0052e42c3d0 approved + acknowledged; follow-up fix for strict UTF-8 (RED total 0, GREEN 67/67), review review-b1eaa46fdc25966a approved + acknowledged, no findings |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
