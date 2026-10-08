@@ -51,6 +51,7 @@ SwiftPM package:
 | 4 | ec540f4 | RED 18 failing vs stubs, GREEN 49/49; review review-ffde107baf041cdc approved + acknowledged |
 | 5 | 3d8654e + a3d4791 | RED 7 failing vs stub, GREEN 66/66; review review-230ad0052e42c3d0 approved + acknowledged; follow-up fix for strict UTF-8 (RED total 0, GREEN 67/67), review review-b1eaa46fdc25966a approved + acknowledged, no findings |
 | 6 | 7fa7956 | RED 46 failing vs stubs, GREEN 81/81 (incl. characterization test from live payload shape: microsecond resets_at); app launched locally (process alive, empty log); live endpoint returned 200 with five_hour 49%, seven_day 31%, Fable weekly 0%; visual check confirmed by user (icon with %, panel with Session/Weekly/Fable Weekly and local stats; macOS Keychain access prompt shown as expected); review review-e20e6082fcb7ba2a approved + acknowledged |
+| 7 | 2736bed | RED n/a (packaging/docs); bash -n OK; scripts/build-app.sh built dist/AgentsBar.app; plutil -lint OK; codesign --verify OK; LSUIElement true; version 0.1.0 matches AgentsBarCore.version; dist/ gitignored; `--universal` untested; review review-d34339fa37039bde (high tier, 4 lenses) approved + acknowledged |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
@@ -85,3 +86,14 @@ SwiftPM package:
 - R3-002 AppModel.swift:31-40 (WARNING): menu bar summary fallback rules for failure states.
 - R3-003 PanelView.swift:101 (SUGGESTION).
 - Reset countdowns only update when the panel re-renders.
+
+## Follow-ups (non-blocking review findings, task 7; all SUGGESTION unless noted)
+
+- R3-no-bundle-verification (WARNING) build-app.sh:35-56: script does not self-verify the bundle (plutil/codesign --verify) before reporting success.
+- R3-developer-id-signing-incomplete / R2-unconditional-no-timestamp / R4-001 build-app.sh:54: Developer ID signing needs hardened runtime + secure timestamp (and notarization) for distribution; `--timestamp=none` is applied unconditionally.
+- R2-version-scrape / R3-version-extraction-unvalidated build-app.sh:21-25: version scraped by sed and not validated as non-empty/semver.
+- R2-duplicated-build-invocation build-app.sh:27-28; R2-plist-constants build-app.sh:42-47.
+
+## Status
+
+Feature v1 complete on branch feat/claude-usage-menubar. Push/PR/merge are the user's decision.
