@@ -35,7 +35,7 @@ SwiftPM package:
 
 - [x] 1. Scaffold SwiftPM package (Core lib, app executable, tests), .gitignore, README stub
 - [x] 2. Usage response parsing (session/weekly/scoped windows, scale normalization)
-- [ ] 3. Keychain credentials reader (parse, expiry check, no refresh)
+- [x] 3. Keychain credentials reader (parse, expiry check, no refresh)
 - [ ] 4. Usage API client (request, 401/429/transport error mapping)
 - [ ] 5. Local transcript scanner (today/7-day tokens, top model, dedup)
 - [ ] 6. Menu bar UI (icon with %, panel with meters and resets, refresh timer, 90% alert)
@@ -46,3 +46,11 @@ SwiftPM package:
 | Task | Commit | Checks |
 |---|---|---|
 | 1 | 1f112f1 | swift build OK; swift test 1/1 passed (RED n/a: scaffold) |
+| 2 | 514067b | RED 17 failing vs stub, GREEN 19/19; extra RED/GREEN for non-object scoped entries; review review-1739f1c216a56b8a approved + acknowledged |
+
+## Follow-ups (non-blocking review findings, task 2)
+
+- Weekly fallback: an `seven_day_oauth_apps` object with unusable utilization does not fall back to `seven_day` (UsageParser.swift:44-47).
+- Scale heuristic is inherently ambiguous; scoped percents participate in the scale decision (matches Omarchy; revisit if payloads disagree).
+- Duplicate scoped titles possible when two kinds map to the same window suffix.
+- Fractional-second precision of `resets_at` is not asserted in tests.
