@@ -73,7 +73,11 @@ public struct KeychainSecretStore: SecretStore {
     }
 }
 
-public struct CredentialsProvider {
+public protocol CredentialsLoading: Sendable {
+    func load() throws -> ClaudeCredentials?
+}
+
+public struct CredentialsProvider: CredentialsLoading {
     private let store: SecretStore
     private let service: String
 
