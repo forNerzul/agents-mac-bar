@@ -78,7 +78,7 @@ public enum LimitsState: Equatable, Sendable {
     case signedOut
     case credentialsUnavailable
     case expired
-    case ok(UsageSnapshot)
+    case ok(UsageSnapshot, plan: String?)
     case failed(UsageClientError)
 }
 
@@ -112,7 +112,7 @@ public struct LimitsService: Sendable {
         if loaded.isExpired(now: now().addingTimeInterval(Self.expirySkew)) { return .expired }
 
         do {
-            return .ok(try await client.fetch(accessToken: loaded.accessToken))
+            return .ok(try await client.fetch(accessToken: loaded.accessToken), plan: loaded.subscriptionType)
         } catch .unauthorized {
             return .expired
         } catch {

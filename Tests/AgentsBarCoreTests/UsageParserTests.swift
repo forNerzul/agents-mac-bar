@@ -113,6 +113,22 @@ private func date(_ iso: String) -> Date {
         #expect(snap.limits[2].resetsAt == nil)
     }
 
+    @Test func resetsAtWithMicrosecondsMatchesLiveEndpointShape() throws {
+        // Shape observed from the live endpoint (2026-10): six fractional digits and a +00:00 offset.
+        let snap = try parse("""
+        {"five_hour":{"utilization":49.0,"resets_at":"2026-10-08T21:00:00.829504+00:00"},
+         "seven_day":{"utilization":31.0,"resets_at":"2026-10-11T02:00:00.829529+00:00"},
+         "seven_day_oauth_apps":null,
+         "limits":[{"kind":"session","percent":49},{"kind":"weekly_all","percent":31},
+                   {"kind":"weekly_scoped","percent":0,"scope":{"model":{"display_name":"Fable"}}}]}
+        """)
+        #expect(snap.limits.map(\.title) == ["Session (5-hour)", "Weekly (7-day)", "Fable Weekly"])
+        #expect(snap.limits.map(\.percent) == [49, 31, 0])
+        let expected = date("2026-10-08T21:00:00Z").timeIntervalSince1970 + 0.829504
+        let actual = try #require(snap.limits[0].resetsAt).timeIntervalSince1970
+        #expect(abs(actual - expected) < 0.001)
+    }
+
     @Test func missingResetsAtIsNil() throws {
         let snap = try parse(#"{"five_hour":{"utilization":5}}"#)
         #expect(snap.limits[0].resetsAt == nil)

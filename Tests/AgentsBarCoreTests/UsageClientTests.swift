@@ -174,11 +174,12 @@ private func service(
     @Test func validTokenReturnsSnapshot() async throws {
         let transport = FakeTransport(reply(200, body: validBody))
         let state = await service(.success(creds(expiresIn: 61)), transport: transport).load()
-        guard case .ok(let snapshot) = state else {
+        guard case .ok(let snapshot, let plan) = state else {
             Issue.record("expected .ok, got \(state)")
             return
         }
         #expect(snapshot.limits.first?.percent == 37)
+        #expect(plan == "max")
         #expect(transport.requests.first?.value(forHTTPHeaderField: "Authorization") == "Bearer fake-token")
     }
 
