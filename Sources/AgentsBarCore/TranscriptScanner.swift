@@ -89,8 +89,10 @@ public struct TranscriptScanner: Sendable {
 
         var entries: [String: Entry] = [:]
         for file in transcriptFiles(modifiedSince: windowStart) {
-            guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
-            collect(text, file: file, windowStart: windowStart, into: &entries)
+            guard let data = try? Data(contentsOf: file) else { continue }
+            // Lossy decoding: a transcript being appended to may end mid-character,
+            // which must only spoil its last (incomplete) line, not the whole file.
+            collect(String(decoding: data, as: UTF8.self), file: file, windowStart: windowStart, into: &entries)
         }
 
         var todayTotal = TokenCounts()

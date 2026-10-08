@@ -87,6 +87,18 @@ private final class Fixture {
         #expect(stats.today == TokenCounts(input: 20, output: 40, cacheRead: 80, cacheWrite: 60))
     }
 
+    @Test func fileTruncatedMidCharacterStillCountsCompleteLines() throws {
+        // A transcript being appended to can end inside a multi-byte UTF-8 sequence.
+        let f = try Fixture()
+        let url = try f.write("projects/p/a.jsonl", lines: [line(ts: todayTS, msg: "m1")])
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data("\n{\"type\":\"assistant\",\"note\":\"".utf8) + Data([0xE2, 0x82]))
+        try handle.close()
+        try FileManager.default.setAttributes([.modificationDate: fixedNow], ofItemAtPath: url.path)
+        #expect(f.scan().today.total == 100)
+    }
+
     @Test func timestampsWithoutFractionalSecondsAreParsed() throws {
         let f = try Fixture()
         try f.write("projects/p/a.jsonl", lines: [line(ts: "2026-10-08T14:03:11Z")])

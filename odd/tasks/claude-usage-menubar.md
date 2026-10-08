@@ -49,6 +49,7 @@ SwiftPM package:
 | 2 | 514067b | RED 17 failing vs stub, GREEN 19/19; extra RED/GREEN for non-object scoped entries; review review-1739f1c216a56b8a approved + acknowledged |
 | 3 | fdc7747 | RED 8 failing vs stubs, GREEN 31/31; review review-58f77bdd914bd203 approved + acknowledged |
 | 4 | ec540f4 | RED 18 failing vs stubs, GREEN 49/49; review review-ffde107baf041cdc approved + acknowledged |
+| 5 | 3d8654e + fix | RED 7 failing vs stub, GREEN 66/66; review review-230ad0052e42c3d0 approved + acknowledged; follow-up fix for strict UTF-8 (RED total 0, GREEN 67/67) |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
@@ -70,3 +71,9 @@ SwiftPM package:
 - R3-002 UsageClient.swift:63-64: 403 is folded into `.unauthorized` (shown as expired); a 403 may mean missing scope rather than a stale token.
 - R3-003 UsageClient.swift:67-69: HTTP-date `Retry-After` is ignored.
 - R3-004 UsageClient.swift:39: request timeout is hard-coded to 10s.
+
+## Follow-ups (non-blocking review findings, task 5)
+
+- R3-strict-utf8-drops-file (TranscriptScanner.swift:92): FIXED in a follow-up commit (lossy decoding).
+- R3-dedup-tie-order-dependent (TranscriptScanner.swift:177): equal-total duplicates keep whichever is read first; harmless for totals, may pick a different model/session.
+- R3-model-tiebreak-untested (TranscriptScanner.swift:110): alphabetical tiebreak not covered by a test.
