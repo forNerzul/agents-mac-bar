@@ -50,7 +50,7 @@ SwiftPM package:
 | 3 | fdc7747 | RED 8 failing vs stubs, GREEN 31/31; review review-58f77bdd914bd203 approved + acknowledged |
 | 4 | ec540f4 | RED 18 failing vs stubs, GREEN 49/49; review review-ffde107baf041cdc approved + acknowledged |
 | 5 | 3d8654e + a3d4791 | RED 7 failing vs stub, GREEN 66/66; review review-230ad0052e42c3d0 approved + acknowledged; follow-up fix for strict UTF-8 (RED total 0, GREEN 67/67), review review-b1eaa46fdc25966a approved + acknowledged, no findings |
-| 6 | 7fa7956 | RED 46 failing vs stubs, GREEN 81/81 (incl. characterization test from live payload shape: microsecond resets_at); app launched locally (process alive, empty log); live endpoint returned 200 with five_hour 49%, seven_day 31%, Fable weekly 0%; visual check pending (no screen-recording permission); review review-e20e6082fcb7ba2a approved + acknowledged |
+| 6 | 7fa7956 | RED 46 failing vs stubs, GREEN 81/81 (incl. characterization test from live payload shape: microsecond resets_at); app launched locally (process alive, empty log); live endpoint returned 200 with five_hour 49%, seven_day 31%, Fable weekly 0%; visual check confirmed by user (icon with %, panel with Session/Weekly/Fable Weekly and local stats; macOS Keychain access prompt shown as expected); review review-e20e6082fcb7ba2a approved + acknowledged |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
