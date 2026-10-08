@@ -50,6 +50,7 @@ SwiftPM package:
 | 3 | fdc7747 | RED 8 failing vs stubs, GREEN 31/31; review review-58f77bdd914bd203 approved + acknowledged |
 | 4 | ec540f4 | RED 18 failing vs stubs, GREEN 49/49; review review-ffde107baf041cdc approved + acknowledged |
 | 5 | 3d8654e + a3d4791 | RED 7 failing vs stub, GREEN 66/66; review review-230ad0052e42c3d0 approved + acknowledged; follow-up fix for strict UTF-8 (RED total 0, GREEN 67/67), review review-b1eaa46fdc25966a approved + acknowledged, no findings |
+| 6 | 7fa7956 | RED 46 failing vs stubs, GREEN 81/81 (incl. characterization test from live payload shape: microsecond resets_at); app launched locally (process alive, empty log); live endpoint returned 200 with five_hour 49%, seven_day 31%, Fable weekly 0%; visual check pending (no screen-recording permission); review review-e20e6082fcb7ba2a approved + acknowledged |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
@@ -77,3 +78,10 @@ SwiftPM package:
 - R3-strict-utf8-drops-file (TranscriptScanner.swift:92): FIXED in a follow-up commit (lossy decoding).
 - R3-dedup-tie-order-dependent (TranscriptScanner.swift:177): equal-total duplicates keep whichever is read first; harmless for totals, may pick a different model/session.
 - R3-model-tiebreak-untested (TranscriptScanner.swift:110): alphabetical tiebreak not covered by a test.
+
+## Follow-ups (non-blocking review findings, task 6; locations only)
+
+- R3-001 AppModel.swift:43-63 (WARNING): refresh loop / in-flight guard; a manual refresh during an in-flight one is dropped silently.
+- R3-002 AppModel.swift:31-40 (WARNING): menu bar summary fallback rules for failure states.
+- R3-003 PanelView.swift:101 (SUGGESTION).
+- Reset countdowns only update when the panel re-renders.
