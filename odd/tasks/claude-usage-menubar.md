@@ -47,6 +47,7 @@ SwiftPM package:
 |---|---|---|
 | 1 | 1f112f1 | swift build OK; swift test 1/1 passed (RED n/a: scaffold) |
 | 2 | 514067b | RED 17 failing vs stub, GREEN 19/19; extra RED/GREEN for non-object scoped entries; review review-1739f1c216a56b8a approved + acknowledged |
+| 3 | fdc7747 | RED 8 failing vs stubs, GREEN 31/31; review review-58f77bdd914bd203 approved + acknowledged |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
@@ -54,3 +55,10 @@ SwiftPM package:
 - Scale heuristic is inherently ambiguous; scoped percents participate in the scale decision (matches Omarchy; revisit if payloads disagree).
 - Duplicate scoped titles possible when two kinds map to the same window suffix.
 - Fractional-second precision of `resets_at` is not asserted in tests.
+
+## Follow-ups (non-blocking review findings, task 3)
+
+- `expiresAt` unit (epoch milliseconds) is assumed, not verified against the real Keychain item.
+- No clock-skew margin in `isExpired`; consider treating tokens expiring within ~60s as expired.
+- Boolean `expiresAt` guard is untested.
+- First real Keychain read may prompt for access (item owned by Claude Code); `errSecSuccess` with non-Data result is mapped to nil.
