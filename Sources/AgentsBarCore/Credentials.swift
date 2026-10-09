@@ -69,7 +69,7 @@ public protocol ProcessRunning: Sendable {
 }
 
 private final class OutputBox: @unchecked Sendable {
-    // Written once by the reader queue; read only after the group has been waited on.
+    // Written once by the reader thread; read only after `done` has been signalled.
     var data = Data()
 }
 
@@ -86,9 +86,6 @@ public struct FoundationProcessRunner: ProcessRunning {
         process.standardError = FileHandle.nullDevice
         process.standardInput = FileHandle.nullDevice
 
-        let exited = DispatchSemaphore(value: 0)
-        process.terminationHandler = { _ in exited.signal() }
-
         do {
             try process.run()
         } catch {
@@ -97,19 +94,24 @@ public struct FoundationProcessRunner: ProcessRunning {
         // The parent must not hold the write end, or the reader would never see EOF.
         try? pipe.fileHandleForWriting.close()
 
-        // Drain stdout concurrently: the payload can exceed the pipe buffer and would block the child.
+        // Drain stdout while the child runs: the payload can exceed the pipe buffer and would block it.
+        // A dedicated thread, not a dispatch queue: with few cores the shared pools can be exhausted
+        // by other blocked work, and the reader would never run.
         let output = OutputBox()
-        let reader = DispatchGroup()
+        let done = DispatchSemaphore(value: 0)
         let handle = pipe.fileHandleForReading
-        DispatchQueue.global().async(group: reader) {
+        let reader = Thread {
             output.data = handle.readDataToEndOfFile()
+            process.waitUntilExit()
+            done.signal()
         }
+        reader.start()
 
-        if exited.wait(timeout: .now() + timeout) == .timedOut {
+        // The timeout bounds the whole run: reading stdout and waiting for exit.
+        if done.wait(timeout: .now() + timeout) == .timedOut {
             process.terminate()
             throw CredentialsError.securityToolTimedOut
         }
-        reader.wait()
         return ProcessResult(exitCode: process.terminationStatus, stdout: output.data)
     }
 }

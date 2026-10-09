@@ -174,6 +174,24 @@ private final class FakeRunner: ProcessRunning, @unchecked Sendable {
         #expect(result.stdout.count == 200_000)
     }
 
+    @Test func readsLargePayloadWhileGlobalQueueIsSaturated() throws {
+        // CI runners have few cores; parallel tests can exhaust the global dispatch pool.
+        // The stdout reader must not depend on that pool being available.
+        let release = DispatchSemaphore(value: 0)
+        let blockers = 128
+        for _ in 0..<blockers {
+            DispatchQueue.global().async { release.wait() }
+        }
+        defer { for _ in 0..<blockers { release.signal() } }
+
+        let result = try runner.run(
+            executable: URL(fileURLWithPath: "/bin/sh"),
+            arguments: ["-c", "head -c 200000 /dev/zero | tr '\\0' a"],
+            timeout: 3
+        )
+        #expect(result.stdout.count == 200_000)
+    }
+
     @Test func timeoutTerminatesProcessQuickly() {
         let start = Date()
         #expect(throws: CredentialsError.securityToolTimedOut) {

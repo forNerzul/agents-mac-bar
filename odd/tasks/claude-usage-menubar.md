@@ -103,7 +103,8 @@ Users saw the Keychain password prompt repeatedly. Evidence: item `mdat` changed
 ## Follow-ups (non-blocking review findings, task 8)
 
 - R3-security-hex-output-unhandled (WARNING) Credentials.swift:143-147: `security -w` prints hex for non-printable payloads; the current ASCII JSON item is unaffected.
-- R3-timeout-not-total-bound (WARNING) Credentials.swift:108-112: the stdout drain after exit is not bounded by the timeout.
+- R3-timeout-not-total-bound (WARNING) Credentials.swift:108-112: FIXED together with the CI deadlock below (timeout now bounds read + exit).
+- CI failure on 94a8bf4: `readsPayloadLargerThanPipeBuffer` timed out on a 3-core runner. Root cause: stdout reader on `DispatchQueue.global()` starved when the pool was exhausted by parallel blocked tests. Reproduced deterministically (RED) by saturating the global queue; fixed with a dedicated reader thread (GREEN 92/92, 15/15 full-suite stress runs).
 - R3-blocking-semaphore-wait (SUGGESTION) Credentials.swift:108: the synchronous wait blocks a thread during load.
 
 ## Status
