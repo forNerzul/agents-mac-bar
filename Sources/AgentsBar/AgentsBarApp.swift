@@ -11,14 +11,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct AgentsBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var model = AppModel()
 
     var body: some Scene {
-        MenuBarExtra("Claude", systemImage: "gauge.with.dots.needle.33percent") {
-            Text("Agents Bar \(AgentsBarCore.version)")
-            Divider()
-            Button("Quit") {
-                NSApplication.shared.terminate(nil)
-            }
+        MenuBarExtra {
+            PanelView(model: model)
+        } label: {
+            // The label is alive from launch (the panel is not), so it owns the refresh loop.
+            MenuLabel(model: model)
+                .task { await model.run() }
         }
+        .menuBarExtraStyle(.window)
     }
 }
