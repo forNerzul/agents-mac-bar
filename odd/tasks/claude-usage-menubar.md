@@ -41,6 +41,7 @@ SwiftPM package:
 - [x] 6. Menu bar UI (icon with %, panel with meters and resets, refresh timer, 90% alert)
 - [x] 7. App bundle packaging script (LSUIElement) and README
 - [x] 8. Read the token through `/usr/bin/security` instead of SecItemCopyMatching (no recurring Keychain prompts)
+- [x] 9. Fix percent-scale misread at low usage: payloads with a `limits` array are always percent-scaled
 
 ## Evidence
 

@@ -49,8 +49,12 @@ public enum UsageParser {
 
         guard !raw.isEmpty else { throw UsageParserError.noLimits }
 
-        // Any value >= 1 means the whole payload is already percent-scaled.
-        let scale = raw.contains { $0.value >= 1 } ? 1.0 : 100.0
+        // The current API sends a `limits` array whose values are named `percent`, so the whole
+        // payload is percent-scaled even when every value is below 1 (low usage after a reset).
+        // Legacy payloads without it may use fractions; there, any value >= 1 means percent.
+        // A legacy payload whose percentages are all below 1 is inherently ambiguous.
+        let percentScaled = root["limits"] is [Any] || raw.contains { $0.value >= 1 }
+        let scale = percentScaled ? 1.0 : 100.0
         return UsageSnapshot(limits: raw.map {
             UsageLimit(title: $0.title, percent: min(max($0.value * scale, 0), 100), resetsAt: $0.resetsAt)
         })

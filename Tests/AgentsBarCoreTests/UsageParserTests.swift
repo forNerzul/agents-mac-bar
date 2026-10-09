@@ -36,6 +36,22 @@ private func date(_ iso: String) -> Date {
         #expect(snap.limits.map(\.percent) == [1, 0.4])
     }
 
+    @Test func lowUsageWithLimitsArrayStaysPercentScaled() throws {
+        // Right after a reset every value can be below 1. The current API (which sends `limits`)
+        // reports percentages, so 0.5 means 0.5%, not 50%.
+        let snap = try parse("""
+        {"five_hour":{"utilization":0.5},"seven_day":{"utilization":0.8},
+         "limits":[{"kind":"session","percent":0.5},{"kind":"weekly_all","percent":0.8},
+                   {"kind":"weekly_scoped","percent":0,"scope":{"model":{"display_name":"Fable"}}}]}
+        """)
+        #expect(snap.limits.map(\.percent) == [0.5, 0.8, 0])
+    }
+
+    @Test func emptyLimitsArrayStillMarksPercentScale() throws {
+        let snap = try parse(#"{"five_hour":{"utilization":0.5},"limits":[]}"#)
+        #expect(snap.limits.map(\.percent) == [0.5])
+    }
+
     @Test func oauthAppsWeeklyPreferredOverSevenDay() throws {
         let snap = try parse("""
         {"seven_day":{"utilization":10},"seven_day_oauth_apps":{"utilization":20}}
