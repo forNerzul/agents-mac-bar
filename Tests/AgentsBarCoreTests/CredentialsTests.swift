@@ -86,12 +86,105 @@ private struct FakeStore: SecretStore {
     }
 
     @Test func storeErrorPropagates() {
-        let provider = CredentialsProvider(store: FakeStore(result: .failure(.keychain(-25308))))
-        #expect(throws: CredentialsError.keychain(-25308)) { try provider.load() }
+        let provider = CredentialsProvider(store: FakeStore(result: .failure(.securityTool(exitCode: 1))))
+        #expect(throws: CredentialsError.securityTool(exitCode: 1)) { try provider.load() }
     }
 
     @Test func malformedItemPropagatesParseError() {
         let provider = CredentialsProvider(store: FakeStore(result: .success(Data("x".utf8))))
         #expect(throws: CredentialsError.invalidPayload) { try provider.load() }
+    }
+}
+
+private final class FakeRunner: ProcessRunning, @unchecked Sendable {
+    let result: Result<ProcessResult, CredentialsError>
+    private(set) var calls: [(executable: URL, arguments: [String], timeout: TimeInterval)] = []
+
+    init(_ result: Result<ProcessResult, CredentialsError>) { self.result = result }
+
+    func run(executable: URL, arguments: [String], timeout: TimeInterval) throws -> ProcessResult {
+        calls.append((executable, arguments, timeout))
+        return try result.get()
+    }
+}
+
+@Suite struct SecurityToolSecretStoreTests {
+    private func store(_ runner: FakeRunner) -> SecurityToolSecretStore {
+        SecurityToolSecretStore(runner: runner)
+    }
+
+    @Test func runsSecurityToolWithServiceOnly() throws {
+        let runner = FakeRunner(.success(ProcessResult(exitCode: 0, stdout: Data("x\n".utf8))))
+        _ = try store(runner).genericPassword(service: "Claude Code-credentials")
+        #expect(runner.calls.count == 1)
+        #expect(runner.calls[0].executable == URL(fileURLWithPath: "/usr/bin/security"))
+        #expect(runner.calls[0].arguments == ["find-generic-password", "-s", "Claude Code-credentials", "-w"])
+        #expect(runner.calls[0].timeout == 5)
+    }
+
+    @Test func successStripsExactlyOneTrailingNewline() throws {
+        let one = FakeRunner(.success(ProcessResult(exitCode: 0, stdout: Data("secret\n".utf8))))
+        #expect(try store(one).genericPassword(service: "s") == Data("secret".utf8))
+        let two = FakeRunner(.success(ProcessResult(exitCode: 0, stdout: Data("secret\n\n".utf8))))
+        #expect(try store(two).genericPassword(service: "s") == Data("secret\n".utf8))
+        let none = FakeRunner(.success(ProcessResult(exitCode: 0, stdout: Data("secret".utf8))))
+        #expect(try store(none).genericPassword(service: "s") == Data("secret".utf8))
+    }
+
+    @Test func exit44MeansNoItem() throws {
+        let runner = FakeRunner(.success(ProcessResult(exitCode: 44, stdout: Data())))
+        #expect(try store(runner).genericPassword(service: "s") == nil)
+    }
+
+    @Test func otherExitCodeThrowsWithoutOutput() {
+        let runner = FakeRunner(.success(ProcessResult(exitCode: 1, stdout: Data("leak".utf8))))
+        #expect(throws: CredentialsError.securityTool(exitCode: 1)) {
+            try store(runner).genericPassword(service: "s")
+        }
+    }
+
+    @Test func runnerErrorsPropagate() {
+        let runner = FakeRunner(.failure(.securityToolTimedOut))
+        #expect(throws: CredentialsError.securityToolTimedOut) {
+            try store(runner).genericPassword(service: "s")
+        }
+    }
+}
+
+@Suite struct FoundationProcessRunnerTests {
+    private let runner = FoundationProcessRunner()
+
+    @Test func capturesStdoutAndExitCode() throws {
+        let result = try runner.run(executable: URL(fileURLWithPath: "/bin/echo"), arguments: ["hello"], timeout: 5)
+        #expect(result == ProcessResult(exitCode: 0, stdout: Data("hello\n".utf8)))
+    }
+
+    @Test func reportsNonZeroExitCode() throws {
+        let result = try runner.run(executable: URL(fileURLWithPath: "/bin/sh"), arguments: ["-c", "exit 44"], timeout: 5)
+        #expect(result.exitCode == 44)
+    }
+
+    @Test func readsPayloadLargerThanPipeBuffer() throws {
+        let result = try runner.run(
+            executable: URL(fileURLWithPath: "/bin/sh"),
+            arguments: ["-c", "head -c 200000 /dev/zero | tr '\\0' a"],
+            timeout: 10
+        )
+        #expect(result.exitCode == 0)
+        #expect(result.stdout.count == 200_000)
+    }
+
+    @Test func timeoutTerminatesProcessQuickly() {
+        let start = Date()
+        #expect(throws: CredentialsError.securityToolTimedOut) {
+            try runner.run(executable: URL(fileURLWithPath: "/bin/sleep"), arguments: ["5"], timeout: 0.5)
+        }
+        #expect(Date().timeIntervalSince(start) < 3)
+    }
+
+    @Test func missingExecutableIsUnavailable() {
+        #expect(throws: CredentialsError.securityToolUnavailable) {
+            try runner.run(executable: URL(fileURLWithPath: "/nonexistent/tool"), arguments: [], timeout: 1)
+        }
     }
 }

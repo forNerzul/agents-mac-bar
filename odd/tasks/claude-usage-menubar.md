@@ -40,6 +40,7 @@ SwiftPM package:
 - [x] 5. Local transcript scanner (today/7-day tokens, top model, dedup)
 - [x] 6. Menu bar UI (icon with %, panel with meters and resets, refresh timer, 90% alert)
 - [x] 7. App bundle packaging script (LSUIElement) and README
+- [x] 8. Read the token through `/usr/bin/security` instead of SecItemCopyMatching (no recurring Keychain prompts)
 
 ## Evidence
 
@@ -94,6 +95,10 @@ SwiftPM package:
 - R2-version-scrape / R3-version-extraction-unvalidated build-app.sh:21-25: version scraped by sed and not validated as non-empty/semver.
 - R2-duplicated-build-invocation build-app.sh:27-28; R2-plist-constants build-app.sh:42-47.
 
+## Task 8 rationale (2026-10-09)
+
+Users saw the Keychain password prompt repeatedly. Evidence: item `mdat` changed while the app binary did not; Claude Code 2.1.294 writes the item via `security -i` / `add-generic-password -U` (and has a `delete-generic-password` path), so a per-app "Always Allow" grant on the item is lost whenever Claude Code rewrites it. The item trusts `/usr/bin/security` (its creator), which is how Claude Code reads it back; reading through it does not prompt and does not widen access beyond what Claude Code already allows. Omarchy avoids prompts because Linux Claude Code stores the token in a 0600 file.
+
 ## Status
 
-Feature v1 complete on branch feat/claude-usage-menubar. Push/PR/merge are the user's decision.
+Feature v1 complete on branch feat/claude-usage-menubar except task 8. Push/PR/merge are the user's decision.

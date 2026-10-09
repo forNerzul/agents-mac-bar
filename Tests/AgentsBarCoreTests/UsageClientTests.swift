@@ -151,7 +151,7 @@ private func service(
 
     @Test func credentialsErrorIsCredentialsUnavailable() async {
         let transport = FakeTransport(reply(200, body: validBody))
-        let state = await service(.failure(.keychain(-25293)), transport: transport).load()
+        let state = await service(.failure(.securityTool(exitCode: 1)), transport: transport).load()
         #expect(state == .credentialsUnavailable)
         #expect(transport.requests.isEmpty)
     }

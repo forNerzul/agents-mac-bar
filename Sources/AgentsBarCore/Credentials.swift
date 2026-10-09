@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 public struct ClaudeCredentials: Equatable, Sendable {
     public let accessToken: String
@@ -21,7 +20,9 @@ public struct ClaudeCredentials: Equatable, Sendable {
 public enum CredentialsError: Error, Equatable {
     case invalidPayload
     case missingAccessToken
-    case keychain(OSStatus)
+    case securityTool(exitCode: Int32)
+    case securityToolUnavailable
+    case securityToolTimedOut
 }
 
 public enum CredentialsParser {
@@ -53,22 +54,101 @@ public protocol SecretStore: Sendable {
     func genericPassword(service: String) throws -> Data?
 }
 
-public struct KeychainSecretStore: SecretStore {
+public struct ProcessResult: Equatable, Sendable {
+    public let exitCode: Int32
+    public let stdout: Data
+
+    public init(exitCode: Int32, stdout: Data) {
+        self.exitCode = exitCode
+        self.stdout = stdout
+    }
+}
+
+public protocol ProcessRunning: Sendable {
+    func run(executable: URL, arguments: [String], timeout: TimeInterval) throws -> ProcessResult
+}
+
+private final class OutputBox: @unchecked Sendable {
+    // Written once by the reader queue; read only after the group has been waited on.
+    var data = Data()
+}
+
+public struct FoundationProcessRunner: ProcessRunning {
     public init() {}
 
+    public func run(executable: URL, arguments: [String], timeout: TimeInterval) throws -> ProcessResult {
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = arguments
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        // stderr is never surfaced.
+        process.standardError = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
+
+        let exited = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in exited.signal() }
+
+        do {
+            try process.run()
+        } catch {
+            throw CredentialsError.securityToolUnavailable
+        }
+        // The parent must not hold the write end, or the reader would never see EOF.
+        try? pipe.fileHandleForWriting.close()
+
+        // Drain stdout concurrently: the payload can exceed the pipe buffer and would block the child.
+        let output = OutputBox()
+        let reader = DispatchGroup()
+        let handle = pipe.fileHandleForReading
+        DispatchQueue.global().async(group: reader) {
+            output.data = handle.readDataToEndOfFile()
+        }
+
+        if exited.wait(timeout: .now() + timeout) == .timedOut {
+            process.terminate()
+            throw CredentialsError.securityToolTimedOut
+        }
+        reader.wait()
+        return ProcessResult(exitCode: process.terminationStatus, stdout: output.data)
+    }
+}
+
+/// Reads through `/usr/bin/security`, the tool the item already trusts and Claude Code itself uses,
+/// so macOS does not show a Keychain prompt.
+public struct SecurityToolSecretStore: SecretStore {
+    private static let itemNotFoundExitCode: Int32 = 44
+
+    private let runner: ProcessRunning
+    private let executable: URL
+    private let timeout: TimeInterval
+
+    public init(
+        runner: ProcessRunning = FoundationProcessRunner(),
+        executable: URL = URL(fileURLWithPath: "/usr/bin/security"),
+        timeout: TimeInterval = 5
+    ) {
+        self.runner = runner
+        self.executable = executable
+        self.timeout = timeout
+    }
+
     public func genericPassword(service: String) throws -> Data? {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne,
-        ]
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        switch status {
-        case errSecSuccess: return result as? Data
-        case errSecItemNotFound: return nil
-        default: throw CredentialsError.keychain(status)
+        let result = try runner.run(
+            executable: executable,
+            arguments: ["find-generic-password", "-s", service, "-w"],
+            timeout: timeout
+        )
+        switch result.exitCode {
+        case 0:
+            // The tool appends a single "\n" after the secret.
+            var data = result.stdout
+            if data.last == UInt8(ascii: "\n") { data.removeLast() }
+            return data
+        case Self.itemNotFoundExitCode:
+            return nil
+        default:
+            throw CredentialsError.securityTool(exitCode: result.exitCode)
         }
     }
 }
@@ -81,7 +161,7 @@ public struct CredentialsProvider: CredentialsLoading {
     private let store: SecretStore
     private let service: String
 
-    public init(store: SecretStore = KeychainSecretStore(), service: String = "Claude Code-credentials") {
+    public init(store: SecretStore = SecurityToolSecretStore(), service: String = "Claude Code-credentials") {
         self.store = store
         self.service = service
     }

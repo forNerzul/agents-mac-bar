@@ -13,16 +13,16 @@ Inspired by Omarchy's [`omarchy.agents` plugin](https://github.com/omacom/omarch
 
 ## How it works
 
-- **Token**: read-only from the Keychain item `Claude Code-credentials`. The app never refreshes or writes it; when it expires, run Claude Code and it refreshes itself.
+- **Token**: read-only from the Keychain item `Claude Code-credentials`, via `/usr/bin/security`. The app never refreshes or writes it; when it expires, run Claude Code and it refreshes itself.
 - **Limits**: `GET https://api.anthropic.com/api/oauth/usage`. This endpoint is undocumented and may change; if it fails, the app degrades to local stats.
 - **Local stats**: scans `~/.claude/projects/**/*.jsonl` (or `$CLAUDE_CONFIG_DIR/projects`), last 7 days, deduplicated by message id.
 - **Refresh**: every 10 minutes, plus manual Refresh (⌘R).
 
 ### Keychain prompt
 
-On first launch macOS asks to access "Claude Code-credentials". Choose **Always Allow**.
+The app reads the token by running `/usr/bin/security find-generic-password`, the same way Claude Code does, so macOS does not prompt for your password.
 
-The grant is tied to the binary's code signature. Ad-hoc and debug builds get a new signature on every rebuild, so expect the prompt again after rebuilding. Signing with a stable Developer ID identity (`CODESIGN_IDENTITY`) avoids it.
+This does not widen access: the item already trusts `/usr/bin/security`, and anything that can run it as you could read the token before. Reading through the Security framework directly would instead prompt again each time Claude Code rewrites the item on token refresh.
 
 ## Requirements
 
