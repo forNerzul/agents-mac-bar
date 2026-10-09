@@ -110,6 +110,10 @@ Users saw the Keychain password prompt repeatedly. Evidence: item `mdat` changed
 - R3-abandoned-reader-thread-on-timeout / R3-total-bound-unproved-for-lingering-writer (SUGGESTION): on timeout the reader thread is left to finish after SIGTERM; a grandchild holding stdout could keep it alive.
 - R3-blocking-semaphore-wait (SUGGESTION) Credentials.swift:108: the synchronous wait blocks a thread during load.
 
+## Task 9 (2026-10-09)
+
+Source: full-branch review review-b24b07ff9a012eac finding R3-scale-heuristic-misreads-small-percents. Commit 59b600f: payloads that carry a `limits` array (current API, values named `percent`) are always percent-scaled; legacy payloads keep the any-value->=1 heuristic (documented as inherently ambiguous). RED: 0.5%/0.8% rendered as 50%/80%; GREEN 94/94 (legacy fraction tests unchanged). Review review-87883f07b474cbca approved + acknowledged (1 SUGGESTION at UsageParser.swift:56). Task 8 confirmed in real use: Claude Code rewrote the Keychain item at 14:58:43Z, 56 minutes after relaunch, and no prompt appeared.
+
 ## Status
 
 Feature v1 complete on branch feat/claude-usage-menubar. Push/PR/merge are the user's decision.
