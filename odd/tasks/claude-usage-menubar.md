@@ -53,6 +53,7 @@ SwiftPM package:
 | 5 | 3d8654e + a3d4791 | RED 7 failing vs stub, GREEN 66/66; review review-230ad0052e42c3d0 approved + acknowledged; follow-up fix for strict UTF-8 (RED total 0, GREEN 67/67), review review-b1eaa46fdc25966a approved + acknowledged, no findings |
 | 6 | 7fa7956 | RED 46 failing vs stubs, GREEN 81/81 (incl. characterization test from live payload shape: microsecond resets_at); app launched locally (process alive, empty log); live endpoint returned 200 with five_hour 49%, seven_day 31%, Fable weekly 0%; visual check confirmed by user (icon with %, panel with Session/Weekly/Fable Weekly and local stats; macOS Keychain access prompt shown as expected); review review-e20e6082fcb7ba2a approved + acknowledged |
 | 7 | 2736bed | RED n/a (packaging/docs); bash -n OK; scripts/build-app.sh built dist/AgentsBar.app; plutil -lint OK; codesign --verify OK; LSUIElement true; version 0.1.0 matches AgentsBarCore.version; dist/ gitignored; `--universal` untested; review review-d34339fa37039bde (high tier, 4 lenses) approved + acknowledged |
+| 8 | 94a8bf4 | RED compile failure (missing ProcessRunning/ProcessResult), GREEN 91/91; real `security` exit 44 for missing item confirmed; app relaunched with new binary (user to confirm no prompt across a Claude Code token refresh); review review-eae8b6a08fae35c4 approved + acknowledged |
 
 ## Follow-ups (non-blocking review findings, task 2)
 
@@ -99,6 +100,12 @@ SwiftPM package:
 
 Users saw the Keychain password prompt repeatedly. Evidence: item `mdat` changed while the app binary did not; Claude Code 2.1.294 writes the item via `security -i` / `add-generic-password -U` (and has a `delete-generic-password` path), so a per-app "Always Allow" grant on the item is lost whenever Claude Code rewrites it. The item trusts `/usr/bin/security` (its creator), which is how Claude Code reads it back; reading through it does not prompt and does not widen access beyond what Claude Code already allows. Omarchy avoids prompts because Linux Claude Code stores the token in a 0600 file.
 
+## Follow-ups (non-blocking review findings, task 8)
+
+- R3-security-hex-output-unhandled (WARNING) Credentials.swift:143-147: `security -w` prints hex for non-printable payloads; the current ASCII JSON item is unaffected.
+- R3-timeout-not-total-bound (WARNING) Credentials.swift:108-112: the stdout drain after exit is not bounded by the timeout.
+- R3-blocking-semaphore-wait (SUGGESTION) Credentials.swift:108: the synchronous wait blocks a thread during load.
+
 ## Status
 
-Feature v1 complete on branch feat/claude-usage-menubar except task 8. Push/PR/merge are the user's decision.
+Feature v1 complete on branch feat/claude-usage-menubar. Push/PR/merge are the user's decision.
