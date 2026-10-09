@@ -104,7 +104,9 @@ Users saw the Keychain password prompt repeatedly. Evidence: item `mdat` changed
 
 - R3-security-hex-output-unhandled (WARNING) Credentials.swift:143-147: `security -w` prints hex for non-printable payloads; the current ASCII JSON item is unaffected.
 - R3-timeout-not-total-bound (WARNING) Credentials.swift:108-112: FIXED together with the CI deadlock below (timeout now bounds read + exit).
-- CI failure on 94a8bf4: `readsPayloadLargerThanPipeBuffer` timed out on a 3-core runner. Root cause: stdout reader on `DispatchQueue.global()` starved when the pool was exhausted by parallel blocked tests. Reproduced deterministically (RED) by saturating the global queue; fixed with a dedicated reader thread (GREEN 92/92, 15/15 full-suite stress runs).
+- CI failure on 94a8bf4: `readsPayloadLargerThanPipeBuffer` timed out on a 3-core runner. Root cause: stdout reader on `DispatchQueue.global()` starved when the pool was exhausted by parallel blocked tests. Reproduced deterministically (RED) by saturating the global queue; fixed with a dedicated reader thread in 37844fe (GREEN 92/92, 15/15 full-suite stress runs; CI 92/92 green; review review-8f0c1fd30456ff94 approved + acknowledged).
+- R3-test-saturates-shared-global-pool (WARNING) CredentialsTests.swift:177-185: the regression test blocks 128 global-queue workers for up to 3s while other suites run in parallel; no other test uses the global queue today.
+- R3-abandoned-reader-thread-on-timeout / R3-total-bound-unproved-for-lingering-writer (SUGGESTION): on timeout the reader thread is left to finish after SIGTERM; a grandchild holding stdout could keep it alive.
 - R3-blocking-semaphore-wait (SUGGESTION) Credentials.swift:108: the synchronous wait blocks a thread during load.
 
 ## Status
