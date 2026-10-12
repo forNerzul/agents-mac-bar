@@ -20,7 +20,10 @@ final class AppModel {
     private let scanner: TranscriptScanner
 
     init(
-        service: LimitsService = LimitsService(credentials: CredentialsProvider(), client: UsageClient()),
+        service: LimitsService = LimitsService(
+            credentials: FreshestCredentialsProvider(sources: [CredentialsProvider(), FileCredentialsProvider()]),
+            client: UsageClient()
+        ),
         scanner: TranscriptScanner = TranscriptScanner(claudeDirectory: TranscriptScanner.defaultClaudeDirectory())
     ) {
         self.service = service
