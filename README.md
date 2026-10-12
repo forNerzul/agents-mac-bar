@@ -13,7 +13,7 @@ Inspired by Omarchy's [`omarchy.agents` plugin](https://github.com/omacom/omarch
 
 ## How it works
 
-- **Token**: read-only from the Keychain item `Claude Code-credentials`, via `/usr/bin/security`. The app never refreshes or writes it; when it expires, run Claude Code and it refreshes itself.
+- **Token**: read-only from the Keychain item `Claude Code-credentials` (via `/usr/bin/security`) and from `~/.claude/.credentials.json` (Claude Code's fallback file), using whichever expires latest. The app never refreshes or writes it; when it expires, run Claude Code and it refreshes itself.
 - **Limits**: `GET https://api.anthropic.com/api/oauth/usage`. This endpoint is undocumented and may change; if it fails, the app degrades to local stats.
 - **Local stats**: scans `~/.claude/projects/**/*.jsonl` (or `$CLAUDE_CONFIG_DIR/projects`), last 7 days, deduplicated by message id.
 - **Refresh**: every 10 minutes, plus manual Refresh (⌘R).

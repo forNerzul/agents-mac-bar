@@ -174,3 +174,71 @@ public struct CredentialsProvider: CredentialsLoading {
         return try CredentialsParser.parse(data)
     }
 }
+
+/// Reads Claude Code's plaintext fallback file, where refreshed credentials may land while the Keychain item goes stale.
+public struct FileCredentialsProvider: CredentialsLoading {
+    public static var defaultURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/.credentials.json")
+    }
+
+    /// Returns nil when the file does not exist.
+    public static let readFromDisk: @Sendable (URL) throws -> Data? = { url in
+        do {
+            return try Data(contentsOf: url)
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile {
+            return nil
+        }
+    }
+
+    private let url: URL?
+    private let readFile: @Sendable (URL) throws -> Data?
+
+    public init(url: URL? = nil, readFile: @escaping @Sendable (URL) throws -> Data? = FileCredentialsProvider.readFromDisk) {
+        self.url = url
+        self.readFile = readFile
+    }
+
+    /// Returns nil when no file exists. Never refreshes or writes the token.
+    public func load() throws -> ClaudeCredentials? {
+        guard let data = try readFile(url ?? Self.defaultURL) else { return nil }
+        return try CredentialsParser.parse(data)
+    }
+}
+
+/// Queries every source and returns the credentials that expire last, so a stale source never wins.
+public struct FreshestCredentialsProvider: CredentialsLoading {
+    private let sources: [any CredentialsLoading]
+
+    public init(sources: [any CredentialsLoading]) {
+        self.sources = sources
+    }
+
+    /// A failing source is ignored while another succeeds; its error surfaces only when none does.
+    public func load() throws -> ClaudeCredentials? {
+        var best: ClaudeCredentials?
+        var firstError: Error?
+        for source in sources {
+            do {
+                guard let candidate = try source.load() else { continue }
+                if let current = best {
+                    if Self.isFresher(candidate, than: current) { best = candidate }
+                } else {
+                    best = candidate
+                }
+            } catch {
+                if firstError == nil { firstError = error }
+            }
+        }
+        if let best { return best }
+        if let firstError { throw firstError }
+        return nil
+    }
+
+    private static func isFresher(_ candidate: ClaudeCredentials, than current: ClaudeCredentials) -> Bool {
+        switch (candidate.expiresAt, current.expiresAt) {
+        case let (a?, b?): return a > b
+        case (.some, .none): return true
+        default: return false
+        }
+    }
+}

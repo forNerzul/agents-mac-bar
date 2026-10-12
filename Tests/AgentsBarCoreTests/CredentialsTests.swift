@@ -206,3 +206,112 @@ private final class FakeRunner: ProcessRunning, @unchecked Sendable {
         }
     }
 }
+
+@Suite struct FileCredentialsProviderTests {
+    private let url = URL(fileURLWithPath: "/tmp/fake/.credentials.json")
+
+    @Test func missingFileMeansNotSignedIn() throws {
+        let provider = FileCredentialsProvider(url: url, readFile: { _ in nil })
+        #expect(try provider.load() == nil)
+    }
+
+    @Test func diskReaderReturnsNilForMissingFile() throws {
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathComponent(".credentials.json")
+        #expect(try FileCredentialsProvider.readFromDisk(missing) == nil)
+    }
+
+    @Test func diskReaderReturnsFileContents() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try Data("payload".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        #expect(try FileCredentialsProvider.readFromDisk(file) == Data("payload".utf8))
+    }
+
+    @Test func fileIsParsed() throws {
+        let data = Data(#"{"claudeAiOauth":{"accessToken":"tok","expiresAt":2000,"subscriptionType":"max"}}"#.utf8)
+        let provider = FileCredentialsProvider(url: url, readFile: { requested in
+            #expect(requested == url)
+            return data
+        })
+        #expect(try provider.load() == ClaudeCredentials(
+            accessToken: "tok",
+            expiresAt: Date(timeIntervalSince1970: 2),
+            subscriptionType: "max"
+        ))
+    }
+
+    @Test func readErrorPropagates() {
+        let provider = FileCredentialsProvider(url: url, readFile: { _ in throw CredentialsError.invalidPayload })
+        #expect(throws: CredentialsError.invalidPayload) { try provider.load() }
+    }
+
+    @Test func malformedFilePropagatesParseError() {
+        let provider = FileCredentialsProvider(url: url, readFile: { _ in Data("x".utf8) })
+        #expect(throws: CredentialsError.invalidPayload) { try provider.load() }
+    }
+
+    @Test func defaultURLIsClaudeFallbackFile() {
+        #expect(FileCredentialsProvider.defaultURL.path.hasSuffix("/.claude/.credentials.json"))
+    }
+}
+
+private struct FakeSource: CredentialsLoading {
+    let result: Result<ClaudeCredentials?, CredentialsError>
+
+    func load() throws -> ClaudeCredentials? { try result.get() }
+}
+
+@Suite struct FreshestCredentialsProviderTests {
+    private func creds(_ token: String, expires: TimeInterval?) -> ClaudeCredentials {
+        ClaudeCredentials(
+            accessToken: token,
+            expiresAt: expires.map { Date(timeIntervalSince1970: $0) },
+            subscriptionType: nil
+        )
+    }
+
+    private func provider(_ results: [Result<ClaudeCredentials?, CredentialsError>]) -> FreshestCredentialsProvider {
+        FreshestCredentialsProvider(sources: results.map { FakeSource(result: $0) })
+    }
+
+    @Test func picksLaterExpiryRegardlessOfOrder() throws {
+        let old = creds("old", expires: 100)
+        let new = creds("new", expires: 200)
+        #expect(try provider([.success(old), .success(new)]).load() == new)
+        #expect(try provider([.success(new), .success(old)]).load() == new)
+    }
+
+    @Test func datedExpiryBeatsUnknown() throws {
+        let dated = creds("dated", expires: 100)
+        let undated = creds("undated", expires: nil)
+        #expect(try provider([.success(undated), .success(dated)]).load() == dated)
+        #expect(try provider([.success(dated), .success(undated)]).load() == dated)
+    }
+
+    @Test func tieKeepsEarlierSource() throws {
+        let first = creds("first", expires: 100)
+        let second = creds("second", expires: 100)
+        #expect(try provider([.success(first), .success(second)]).load() == first)
+        let undatedFirst = creds("a", expires: nil)
+        let undatedSecond = creds("b", expires: nil)
+        #expect(try provider([.success(undatedFirst), .success(undatedSecond)]).load() == undatedFirst)
+    }
+
+    @Test func failingSourceDoesNotHideSuccessfulOne() throws {
+        let good = creds("good", expires: 100)
+        #expect(try provider([.failure(.securityTool(exitCode: 1)), .success(good)]).load() == good)
+        #expect(try provider([.success(good), .failure(.invalidPayload)]).load() == good)
+    }
+
+    @Test func allNilMeansNotSignedIn() throws {
+        #expect(try provider([.success(nil), .success(nil)]).load() == nil)
+        #expect(try provider([]).load() == nil)
+    }
+
+    @Test func noCredentialsAndAnErrorRethrowsFirstError() {
+        let p = provider([.success(nil), .failure(.securityToolTimedOut), .failure(.invalidPayload)])
+        #expect(throws: CredentialsError.securityToolTimedOut) { try p.load() }
+    }
+}
